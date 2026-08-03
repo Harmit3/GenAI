@@ -1,3 +1,4 @@
+import json
 from dotenv import load_dotenv
 from openai import OpenAI
 
@@ -48,13 +49,61 @@ system_prompt="""
 
 """
 
+messages = [
+   {"role": "system","content":system_prompt},
+]
+
+user_query=input('> ')
+
+messages.append({"role":"user","content":user_query})
+
+while True:
+   completion = client.chat.completions.create(
+       model="gpt-5.5",
+          response_format={"type":"json_object"},
+          messages=messages,
+   )
+
+   parsed_output=json.loads(completion.choices[0].message.content)
+   # loads convert json to object format, & dumps convert object to json format
+   messages.append({"role":"assistant","content":json.dumps(parsed_output)})
+
+   if parsed_output.get("step")=="plan":
+         print(f"🧠: {parsed_output.get("content") }")
+         continue
+   
+
 completion = client.chat.completions.create(
     model="gpt-5.5",
+    response_format={"type":"json_object"},
     messages=[
+       {
+           "role": "system",
+           "content":system_prompt,
+        },
         {
             "role": "user",
             "content":"What is current weather of Michigan?",
         },
+        {
+            "role": "assistant",
+            "content":json.dump({{"step":"plan", "content":"The user is intrested in weather data of new york"}}),
+       },
+       # whatever input you get after run above code, put that output in next content |
+       #                                                                              |    
+       {
+           "role": "assistant",
+           "content":json.dump({{"step":"plan", "content":"From the available tools, I should call get_weather to obtain the weather information for new york."}}),
+        },
+        {
+            "role": "assistant",
+            "content":json.dump({{"step":"action","function":"get_weather", "input":"new york"}}),
+        },
+        {
+            "role": "assistant",
+            "content":json.dump({{"step":"observe", "output":"31 degree celcius"}}),
+        },
+
     ],
 )
 
