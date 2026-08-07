@@ -1,6 +1,7 @@
 import json
 from dotenv import load_dotenv
 from openai import OpenAI
+import requests
 
 client = OpenAI()
 
@@ -9,9 +10,28 @@ client = OpenAI()
 # Tool means function.
 def get_weather(city: str):
    # TODO: NEED TO DO AN API CALL
-   return "31 degree celcius"
+   print("🛠️ Tool called:get_weather",city)
+   url=f"https://wttr.in/{city}?format=%c+%t"
+   response=requests.get(url)
 
-system_prompt="""
+
+   if response.status_code==200:
+       return f"The weather in {city} is {response.text}."
+   
+   return "Something went wrong."
+
+
+
+#available_tools
+available_tools={
+    "get_weather":{
+        "fn":get_weather,         #keep an instance of function itself
+        "description":"Takes a city name as an input and returns the current weather for the city"
+    }
+}
+
+
+system_prompt=f"""
      You are an helpful AI assistant who is specialized in resolving user query.
      You work on start, plan, action, observe mode.
      For the given user query and availble tools, plan the step by step execution, based on the planning,
@@ -35,12 +55,12 @@ system_prompt="""
 
      
      Availble Tools: 
-       
+      - get_weather : Takes a city name as an input and returns the current weather for the city
 
      Example:
      User Query: What is the weather of new york?
      Output: {{"step":"plan", "content":"The user is intrested in weather data of new york"}}
-     Output: {{"step":"plan", "content":"From the avaible tools I should call get_weather"}}
+     Output: {{"step":"plan", "content":"From the available tools I should call get_weather"}}
      Output: {{"step":"action", "function":"get_weather", "input":"new york"}}
      Output: {{"step":"observe", "output":"12 degree Cel"}}
      Output: {{"step":"output", "content":"The weather for new york seems to be 12 degrees."}}
@@ -71,40 +91,21 @@ while True:
    if parsed_output.get("step")=="plan":
          print(f"🧠: {parsed_output.get("content") }")
          continue
-   
 
-completion = client.chat.completions.create(
-    model="gpt-5.5",
-    response_format={"type":"json_object"},
-    messages=[
-       {
-           "role": "system",
-           "content":system_prompt,
-        },
-        {
-            "role": "user",
-            "content":"What is current weather of Michigan?",
-        },
-        {
-            "role": "assistant",
-            "content":json.dump({{"step":"plan", "content":"The user is intrested in weather data of new york"}}),
-       },
-       # whatever input you get after run above code, put that output in next content |
-       #                                                                              |    
-       {
-           "role": "assistant",
-           "content":json.dump({{"step":"plan", "content":"From the available tools, I should call get_weather to obtain the weather information for new york."}}),
-        },
-        {
-            "role": "assistant",
-            "content":json.dump({{"step":"action","function":"get_weather", "input":"new york"}}),
-        },
-        {
-            "role": "assistant",
-            "content":json.dump({{"step":"observe", "output":"31 degree celcius"}}),
-        },
+      # over here it needs to call function but it don't know which function to call so make available_tools and define there
+   if parsed_output.get("step")=="action":
+       tool_name=parsed_output.get("function")
+       tool_input=parsed_output.get("input")
 
-    ],
-)
 
-print(completion.choices[0].message.content)
+       # here, if u get tools then get tool_name and inside that get the function and finally call tool_input.
+       #after that, asisgned that to output and go to to next step and continue it
+       if available_tools.get(tool_name,False)!=False:
+           output=available_tools[tool_name].get("fn")(tool_input)
+           messages.append({"role": "assistant","content":json.dump({{"step":"observe", "output":output}}),})
+           continue
+
+    # if it's not plan,neither action then it would be output
+   if parsed_output.get("step")=="output":
+       print(f"🤖: {parsed_output.get("content") }")
+       break
