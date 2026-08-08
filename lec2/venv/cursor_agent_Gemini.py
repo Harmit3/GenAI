@@ -7,6 +7,7 @@ import requests
 from google import genai
 from google.genai import types
 
+
 load_dotenv()
 
 client = genai.Client()
@@ -51,9 +52,9 @@ system_prompt=f"""
      Output JSON Format:
      {{ 
          "step": "plan | action | output",
-    "content": "Description of thought/output (required for plan/output)",
+         "content": "Description of thought/output (required for plan/output)",
           "function":"The name of function if the step is action.",
-          "step":"The input parameter for the function",
+          "input":"The input parameter for the function",
      }}
 
 
@@ -84,7 +85,7 @@ while True:
 
   while True:
     response = client.models.generate_content(
-       model="gemini-2.0-flash",
+       model="gemini-3.6-flash",
         contents=contents,
        config=types.GenerateContentConfig(
             system_instruction=system_prompt,
@@ -107,30 +108,39 @@ while True:
        # loads convert json to object format, & dumps convert object to json format
     contents.append(types.Content(role="model", parts=[types.Part.from_text(text=response.text)]))
 
+    step=parsed_output.get("step")
     
-    if parsed_output.get("step")=="plan":
-             print(f"🧠: {parsed_output.get("content") }")
-             continue
-    
-          # over here it needs to call function but it don't know which function to call so make available_tools and define there
-    if parsed_output.get("step")=="action":
-           tool_name=parsed_output.get("function")
-           tool_input=parsed_output.get("input")
-    
-    
-           # here, if u get tools then get tool_name and inside that get the function and finally call tool_input.
-           #after that, asisgned that to output and go to to next step and continue it
-           if tool_name in available_tools:
-               output=available_tools[tool_name].get("fn")(tool_input)
-               observation_json = json.dumps({"step": "observe", "output": output})
-               contents.append(types.Content(role="user", parts=[types.Part.from_text(text=observation_json)]))
-               continue
-    
-        # if it's not plan,neither action then it would be output
-    
-    if parsed_output.get("step")=="output":
-           print(f"🤖: {parsed_output.get("content") }")
-           break
-    
+    if step == "plan":
+            print(f"🧠: {parsed_output.get('content')}")
+            # FIX: Prompt the model to take the next turn so history stays User -> Model -> User
+            contents.append(types.Content(
+                role="user", 
+                parts=[types.Part.from_text(text="Proceed to the next step based on your plan.")]
+            ))
+            continue
+
+    elif step == "action":
+            tool_name = parsed_output.get("function")
+            tool_input = parsed_output.get("input")
+
+            if tool_name in available_tools:
+                output = available_tools[tool_name].get("fn")(tool_input)
+                observation_json = json.dumps({"step": "observe", "output": output})
+                contents.append(types.Content(
+                    role="user", 
+                    parts=[types.Part.from_text(text=observation_json)]
+                ))
+                continue
+            else:
+                error_msg = json.dumps({"step": "observe", "output": f"Tool '{tool_name}' not found."})
+                contents.append(types.Content(
+                    role="user", 
+                    parts=[types.Part.from_text(text=error_msg)]
+                ))
+                continue
+
+    elif step == "output":
+            print(f"🤖: {parsed_output.get('content')}")
+            break
     
     
