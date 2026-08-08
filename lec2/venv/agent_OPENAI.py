@@ -73,15 +73,17 @@ messages = [
    {"role": "system","content":system_prompt},
 ]
 
-user_query=input('> ')
-
-messages.append({"role":"user","content":user_query})
 
 while True:
+ 
+  user_query=input('> ')
+  messages.append({"role":"user","content":user_query})
+
+  while True:
    completion = client.chat.completions.create(
        model="gpt-5.5",
-          response_format={"type":"json_object"},
-          messages=messages,
+       response_format={"type":"json_object"},
+       messages=messages,
    )
 
    parsed_output=json.loads(completion.choices[0].message.content)
@@ -109,3 +111,5 @@ while True:
    if parsed_output.get("step")=="output":
        print(f"🤖: {parsed_output.get("content") }")
        break
+
+
