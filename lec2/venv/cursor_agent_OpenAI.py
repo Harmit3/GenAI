@@ -77,7 +77,7 @@ while True:
 
   while True:
    completion = client.chat.completions.create(
-       model="gpt-5.5",
+       model="gpt-4o",
        response_format={"type":"json_object"},
        messages=messages,
    )
@@ -86,26 +86,13 @@ while True:
    # loads convert json to object format, & dumps convert object to json format
    messages.append({"role":"assistant","content":json.dumps(parsed_output)})
 
-   if parsed_output.get("step")=="plan":
+   if parsed_output.get("step") == "plan":
          print(f"🧠: {parsed_output.get("content") }")
          continue
 
-      # over here it needs to call function but it don't know which function to call so make available_tools and define there
-   if parsed_output("step")=="action":
-       tool_name=parsed_output.get("function")
-       tool_input=parsed_output.get("input")
-
-
-       # here, if u get tools then get tool_name and inside that get the function and finally call tool_input.
-       #after that, asisgned that to output and go to to next step and continue it
-       if available_tools.get(tool_name,False)!=False:
-           output=available_tools[tool_name].get("fn")(tool_input)
-           messages.append({"role": "assistant","content":json.dump({{"step":"observe", "output":output}}),})
-       print(f"🧠: {parsed_output.get('content')}")
-       continue
 
    # over here it needs to call function but it don't know which function to call so make available_tools and define there
-   if parsed_output.get("step")=="action":
+   if parsed_output.get("step") == "action":
        tool_name=parsed_output.get("function")
        tool_input=parsed_output.get("input")
 

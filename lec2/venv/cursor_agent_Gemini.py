@@ -96,8 +96,8 @@ while True:
     ) 
 
 
-    try:
-        parsed_output = json.loads(response.text)
+    try:             
+            parsed_output = json.loads(response.text)
     except json.JSONDecodeError:
         contents.append(types.Content(role="user", parts=[
             types.Part.from_text(text="Your last output was not valid JSON. Please repeat the step using valid raw JSON format.")
