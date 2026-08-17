@@ -1,0 +1,10 @@
+services:
+  ollama:                            # ollama : run the container name ollama
+    image: ollama/ollama:latest      # use this image
+    ports:
+     - '11434:11434'                 # use this port (so ollama runs on this port)
+    volumes:
+     - models:/root/.ollama/models
+
+volumes:
+ models:                  #and, whatever models it download put it in this container
